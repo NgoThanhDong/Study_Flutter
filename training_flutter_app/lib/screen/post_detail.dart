@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:training_flutter_app/model/post.dart';
+import 'package:training_flutter_app/provider/posts_provider.dart';
 
 class PostDetail extends StatelessWidget {
-  const PostDetail({super.key});
+  final Post post;
 
-  /// SAMPLE DATA
-  final String _category = 'CategoryX';
-  final List<String> _tagsData = const ['Tag1', 'Tag2', 'Tag3'];
+  const PostDetail({super.key, required this.post});
 
   @override
   Widget build(BuildContext context) {
@@ -14,106 +18,111 @@ class PostDetail extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Post Detail')),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// TITLE
-              Text(
-                'Post Title title title title title title title',
-                style: textTheme.titleLarge?.copyWith(fontSize: 24),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// TITLE
+            Text(
+              post.title!,
+              style: textTheme.titleLarge?.copyWith(fontSize: 24),
+            ),
+
+            const SizedBox(height: 8),
+
+            /// AUTHOR & DATE
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Author: ${post.author} - Create date: ${post.createdDate}',
               ),
+            ),
 
-              const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
-              /// AUTHOR & DATE
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text('Author: Alex - Create date: 2024-01-01 12:00'),
-                ],
+            /// IMAGE
+            SizedBox(
+              width: double.infinity,
+              child: Image.memory(
+                Base64Decoder().convert(post.image!),
+                fit: BoxFit.contain,
               ),
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              /// IMAGE
-              SizedBox(
-                width: double.infinity,
-                child: Image.asset('images/sample.jpg', fit: BoxFit.contain),
-              ),
+            /// CONTENT
+            Text(post.content!),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 32),
 
-              /// CONTENT
-              const Text(
-                'Lake Oeschinen lies at the foot of the Blüemlisalp in the Bernese '
-                'Alps. Situated 1,578 meters above sea level, it is one of the '
-                'larger Alpine Lakes. A gondola ride from Kandersteg, followed by a '
-                'half-hour walk through pastures and pine forest, leads you to the '
-                'lake, which warms to 20 degrees Celsius in the summer. Activities '
-                'enjoyed here include rowing, and riding the summer toboggan run.'
-                'Lake Oeschinen lies at the foot of the Blüemlisalp in the Bernese '
-                'Alps. Situated 1,578 meters above sea level, it is one of the '
-                'larger Alpine Lakes.',
-                softWrap: true,
-              ),
+            /// CATEGORY
+            _buildCategory(context),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 8),
 
-              /// CATEGORY
-              Wrap(
-                children: [
-                  const Text(
-                    'Category: ',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  _buildLink(
-                    text: _category,
-                    onPressed: () => _categoryPressed(_category, context),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              /// TAGS
-              Wrap(children: _createTags(context)),
-            ],
-          ),
+            /// TAGS
+            _buildTags(context),
+          ],
         ),
       ),
     );
   }
 
-  /// TAG BUILDER
-  List<Widget> _createTags(BuildContext context) {
-    final List<Widget> tags = [
-      const Text('Tags: ', style: TextStyle(fontWeight: FontWeight.bold)),
-    ];
+  // ================= UI SECTIONS =================
 
-    for (int i = 0; i < _tagsData.length; i++) {
-      tags.add(
-        _buildLink(
-          text: i == _tagsData.length - 1 ? _tagsData[i] : '${_tagsData[i]},',
-          onPressed: () => _tagPressed(_tagsData[i], context),
+  Widget _buildCategory(BuildContext context) {
+    return Wrap(
+      children: [
+        const Text(
+          'Category: ',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-      );
-
-      if (i < _tagsData.length - 1) {
-        tags.add(const SizedBox(width: 4));
-      }
-    }
-
-    return tags;
+        _buildLink(
+          text: post.category!,
+          onPressed: () => _applyFilter(
+            context,
+            category: post.category,
+          ),
+        ),
+      ],
+    );
   }
 
-  /// LINK TEXT WIDGET
-  Widget _buildLink({required String text, required VoidCallback onPressed}) {
-    return RawMaterialButton(
-      constraints: const BoxConstraints(),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      onPressed: onPressed,
+  Widget _buildTags(BuildContext context) {
+    final tags = post.tags!.cast<String>();
+
+    return Wrap(
+      children: [
+        const Text(
+          'Tags: ',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        ...List.generate(tags.length, (index) {
+          final tag = tags[index];
+          final text = index == tags.length - 1 ? tag : '$tag,';
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: _buildLink(
+              text: text,
+              onPressed: () => _applyFilter(
+                context,
+                tag: tag,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildLink({
+    required String text,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
       child: Text(
         text,
         style: const TextStyle(
@@ -124,12 +133,23 @@ class PostDetail extends StatelessWidget {
     );
   }
 
-  /// EVENTS
-  void _categoryPressed(String category, BuildContext context) {
-    Navigator.pop(context);
-  }
+  // ================= LOGIC =================
 
-  void _tagPressed(String tag, BuildContext context) {
+  void _applyFilter(
+    BuildContext context, {
+    String? category,
+    String? tag,
+  }) {
+    final provider = context.read<PostsProvider>();
+
+    if (category != null) {
+      provider.updateCategory(category);
+    }
+
+    if (tag != null) {
+      provider.updateTag(tag);
+    }
+
     Navigator.pop(context);
   }
 }

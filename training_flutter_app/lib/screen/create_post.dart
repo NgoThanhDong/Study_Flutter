@@ -1,9 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
+import 'package:training_flutter_app/model/post.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:training_flutter_app/provider/posts_provider.dart';
 
 class CreatePost extends StatefulWidget {
   const CreatePost({super.key});
@@ -16,12 +21,24 @@ class _CreatePostState extends State<CreatePost> {
   /// ================= FORM =================
   final _formKey = GlobalKey<FormState>();
   final ScrollController _scrollController = ScrollController();
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
   /// ================= DATA =================
+  // List object of Author, Post Type, Category, Tag
   final List<String> _author = ['Author 1', 'Author 2', 'Author 3'];
   final List<String> _postType = ['News', 'Blog'];
-  final List<String> _category = ['Category 1', 'Category 2'];
-  final List<String> _tags = ['Tag 1', 'Tag 2', 'Tag 3', 'Tag 4'];
+  final _category = ['Game', 'Phần Mềm', 'Học Lập Trình'];
+  final _tags = [
+    'Hành động',
+    'Thể thao',
+    'Chiến thuật',
+    'Nhập vai',
+    'Lập trình',
+    'Học tập',
+    'Công cụ',
+    'Python',
+    'Java',
+  ];
 
   /// ================= VALUES =================
   String? authorDropdownValue;
@@ -36,6 +53,8 @@ class _CreatePostState extends State<CreatePost> {
   /// ================= IMAGE =================
   File? _image; // mobile
   Uint8List? _webImage; // web
+
+  late final Post post = Post(); // Post object
 
   @override
   void dispose() {
@@ -53,7 +72,7 @@ class _CreatePostState extends State<CreatePost> {
         key: _formKey,
 
         /// ⚠️ QUAN TRỌNG: KHÔNG auto validate
-        autovalidateMode: AutovalidateMode.disabled,
+        autovalidateMode: _autoValidateMode,
 
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -69,6 +88,7 @@ class _CreatePostState extends State<CreatePost> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter title' : null,
+                onSaved: (text) => setState(() => post.title = text),
               ),
 
               const SizedBox(height: 16),
@@ -95,6 +115,7 @@ class _CreatePostState extends State<CreatePost> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter description' : null,
+                onSaved: (text) => setState(() => post.description = text),
               ),
 
               const SizedBox(height: 16),
@@ -109,6 +130,7 @@ class _CreatePostState extends State<CreatePost> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter content' : null,
+                onSaved: (text) => setState(() => post.content = text),
               ),
 
               const SizedBox(height: 16),
@@ -125,6 +147,7 @@ class _CreatePostState extends State<CreatePost> {
                     .toList(),
                 onChanged: (v) => setState(() => authorDropdownValue = v),
                 validator: (v) => v == null ? 'Please select author' : null,
+                onSaved: (v) => setState(() => post.author = v),
               ),
 
               const SizedBox(height: 16),
@@ -141,6 +164,7 @@ class _CreatePostState extends State<CreatePost> {
                     .toList(),
                 onChanged: (v) => setState(() => postTypeDropdownValue = v),
                 validator: (v) => v == null ? 'Please select post type' : null,
+                onSaved: (v) => setState(() => post.postType = v),
               ),
 
               const SizedBox(height: 16),
@@ -157,6 +181,7 @@ class _CreatePostState extends State<CreatePost> {
                     .toList(),
                 onChanged: (v) => setState(() => categoryDropdownValue = v),
                 validator: (v) => v == null ? 'Please select category' : null,
+                onSaved: (v) => setState(() => post.category = v),
               ),
 
               const SizedBox(height: 16),
@@ -183,11 +208,14 @@ class _CreatePostState extends State<CreatePost> {
                   ),
                 ),
                 listType: MultiSelectListType.LIST,
-                onConfirm: (values) =>
-                    setState(() => tagsDropdownValue = values),
+                onConfirm: (values) => setState(() {
+                  tagsDropdownValue = values;
+                  _tagHasError = tagsDropdownValue.isEmpty;
+                }),
                 validator: (values) => values == null || values.isEmpty
                     ? '\t\t\t\tPlease select tags'
                     : null,
+                onSaved: (v) => setState(() => post.tags = v),
               ),
 
               const SizedBox(height: 16),
@@ -210,6 +238,7 @@ class _CreatePostState extends State<CreatePost> {
                       ? null
                       : 'Please enter a valid URL';
                 },
+                onSaved: (text) => setState(() => post.url = text),
               ),
 
               const SizedBox(height: 32),
@@ -261,7 +290,10 @@ class _CreatePostState extends State<CreatePost> {
       padding: const EdgeInsets.only(top: 4, left: 16),
       child: Text(
         'Please choose an image',
-        style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.error,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -279,10 +311,14 @@ class _CreatePostState extends State<CreatePost> {
         _webImage = bytes;
         _hasImageError = false;
       });
+      post.image = base64Encode(bytes);
     } else {
       setState(() {
         _image = File(file.path);
         _hasImageError = false;
+
+        List<int> imageBytes = _image!.readAsBytesSync();
+        post.image = base64Encode(imageBytes);
       });
     }
   }
@@ -325,6 +361,7 @@ class _CreatePostState extends State<CreatePost> {
     });
 
     if (!isValid || !hasImage || tagsDropdownValue.isEmpty) {
+      _autoValidateMode = AutovalidateMode.onUserInteraction;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollController.animateTo(
           0,
@@ -336,6 +373,14 @@ class _CreatePostState extends State<CreatePost> {
     }
 
     _formKey.currentState!.save();
-    Navigator.pop(context);
+
+    post.createdDate = DateFormat("yyyy-MM-dd HH:mm").format(DateTime.now());
+
+    final provider = context.read<PostsProvider>();
+
+    provider.addPost(post);
+    provider.resetFilter();
+
+    Navigator.pop(context, true); // ⬅️ gửi signal về
   }
 }

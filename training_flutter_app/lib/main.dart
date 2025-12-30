@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:training_flutter_app/provider/posts_provider.dart';
 import 'screen/post_list.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => PostsProvider(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 /// Root application
