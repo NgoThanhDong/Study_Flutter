@@ -255,48 +255,45 @@ class PostsRepository {
     ),
   ];
 
-  List<Post> get allPosts => _allPosts;
+  List<Post> get allPosts => List.unmodifiable(_allPosts);
+
   
   // ================= METHODS =================
 
+  void add(Post post) {
+    _allPosts.add(post);
+  }
+
+  void update(Post post) {
+    final index = _allPosts.indexWhere((p) => p.id == post.id);
+    if (index != -1) {
+      _allPosts[index] = post;
+    }
+  }
+
+  void delete(int id) {
+    _allPosts.removeWhere((p) => p.id == id);
+  }
+
   /// Load posts after searching / filtering
   List<Post> loadPosts(
-    String searchText,
-    String categorySelect,
-    String tagSelect,
-    String postTypeSelect,
+    String search,
+    String category,
+    String tag,
+    String postType,
   ) {
-    List<Post> result = List<Post>.from(allPosts);
+    return _allPosts.where((p) {
+      final matchSearch =
+          search.isEmpty || p.title!.toLowerCase().contains(search.toLowerCase());
+      final matchCategory =
+          category.isEmpty || category == 'All' || p.category == category;
+      final matchTag =
+          tag.isEmpty || tag == 'All' || p.tags!.contains(tag);
+      final matchType =
+          postType.isEmpty || p.postType == postType;
 
-    // Search by title
-    if (searchText.isNotEmpty) {
-      final keyword = searchText.toLowerCase();
-      result = result.where((p) {
-        return p.title!.toLowerCase().contains(keyword);
-      }).toList();
-    }
-
-    // Filter by category
-    if (categorySelect.isNotEmpty && categorySelect != 'All') {
-      result = result.where((p) {
-        return p.category == categorySelect;
-      }).toList();
-    }
-
-    // Filter by tag
-    if (tagSelect.isNotEmpty && tagSelect != 'All') {
-      result = result.where((p) {
-        return p.tags!.contains(tagSelect);
-      }).toList();
-    }
-
-    // Filter by post type
-    if (postTypeSelect.isNotEmpty) {
-      result = result.where((p) {
-        return p.postType == postTypeSelect;
-      }).toList();
-    }
-
-    return result;
+      return matchSearch && matchCategory && matchTag && matchType;
+    }).toList();
   }
+  
 }

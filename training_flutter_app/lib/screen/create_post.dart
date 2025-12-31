@@ -9,19 +9,25 @@ import 'package:training_flutter_app/model/post.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:training_flutter_app/provider/posts_provider.dart';
+import 'package:training_flutter_app/utils/center_toast.dart';
 
 class CreatePost extends StatefulWidget {
-  const CreatePost({super.key});
+  // Attribute
+  final String appBarTitle;
+  final Post post;
+
+  const CreatePost({super.key, required this.appBarTitle, required this.post});
 
   @override
   State<CreatePost> createState() => _CreatePostState();
 }
 
 class _CreatePostState extends State<CreatePost> {
+  late String appBarTitle;
+  late Post post;
+
   /// ================= FORM =================
   final _formKey = GlobalKey<FormState>();
-  final ScrollController _scrollController = ScrollController();
-  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
   /// ================= DATA =================
   // List object of Author, Post Type, Category, Tag
@@ -54,11 +60,60 @@ class _CreatePostState extends State<CreatePost> {
   File? _image; // mobile
   Uint8List? _webImage; // web
 
-  late final Post post = Post(); // Post object
+  // Controller for title, description, content, url
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _urlController = TextEditingController();
+
+  final ScrollController _scrollController = ScrollController();
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
+
+  @override
+  void initState() {
+    super.initState();
+
+    appBarTitle = widget.appBarTitle;
+    post = widget.post;
+
+    /// ===== INIT CONTROLLERS (CHỈ 1 LẦN) =====
+    _titleController.text = post.title ?? '';
+    _descriptionController.text = post.description ?? '';
+    _contentController.text = post.content ?? '';
+    _urlController.text = post.url ?? '';
+
+    /// ===== INIT DROPDOWN =====
+    if (post.author != null && post.author!.isNotEmpty) {
+      authorDropdownValue = post.author;
+    }
+    if (post.postType != null && post.postType!.isNotEmpty) {
+      postTypeDropdownValue = post.postType;
+    }
+    if (post.category != null && post.category!.isNotEmpty) {
+      categoryDropdownValue = post.category;
+    }
+    if (post.tags != null && post.tags!.isNotEmpty) {
+      tagsDropdownValue = List<String>.from(post.tags!);
+    }
+
+    /// ===== INIT IMAGE =====
+    if (post.image != null && post.image!.isNotEmpty) {
+      final bytes = base64Decode(post.image!);
+      if (kIsWeb) {
+        _webImage = bytes;
+      } else {
+        _image = File.fromRawPath(bytes);
+      }
+    }
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _contentController.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
@@ -67,7 +122,7 @@ class _CreatePostState extends State<CreatePost> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Post')),
+      appBar: AppBar(title: Text(appBarTitle)),
       body: Form(
         key: _formKey,
 
@@ -82,13 +137,15 @@ class _CreatePostState extends State<CreatePost> {
             children: [
               /// TITLE
               TextFormField(
+                controller: _titleController,
                 decoration: const InputDecoration(
                   labelText: 'Title',
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter title' : null,
-                onSaved: (text) => setState(() => post.title = text),
+                onSaved: (text) =>
+                    setState(() => post.title = _titleController.text),
               ),
 
               const SizedBox(height: 16),
@@ -107,6 +164,7 @@ class _CreatePostState extends State<CreatePost> {
 
               /// DESCRIPTION
               TextFormField(
+                controller: _descriptionController,
                 minLines: 3,
                 maxLines: 10,
                 decoration: const InputDecoration(
@@ -115,13 +173,16 @@ class _CreatePostState extends State<CreatePost> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter description' : null,
-                onSaved: (text) => setState(() => post.description = text),
+                onSaved: (text) => setState(
+                  () => post.description = _descriptionController.text,
+                ),
               ),
 
               const SizedBox(height: 16),
 
               /// CONTENT
               TextFormField(
+                controller: _contentController,
                 minLines: 8,
                 maxLines: 100,
                 decoration: const InputDecoration(
@@ -130,13 +191,15 @@ class _CreatePostState extends State<CreatePost> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter content' : null,
-                onSaved: (text) => setState(() => post.content = text),
+                onSaved: (text) =>
+                    setState(() => post.content = _contentController.text),
               ),
 
               const SizedBox(height: 16),
 
               /// AUTHOR
               DropdownButtonFormField<String>(
+                initialValue: authorDropdownValue,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Author',
@@ -145,7 +208,10 @@ class _CreatePostState extends State<CreatePost> {
                 items: _author
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (v) => setState(() => authorDropdownValue = v),
+                onChanged: (v) => setState(() {
+                  authorDropdownValue = v;
+                  post.author = authorDropdownValue;
+                }),
                 validator: (v) => v == null ? 'Please select author' : null,
                 onSaved: (v) => setState(() => post.author = v),
               ),
@@ -154,6 +220,7 @@ class _CreatePostState extends State<CreatePost> {
 
               /// POST TYPE
               DropdownButtonFormField<String>(
+                initialValue: postTypeDropdownValue,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Post Type',
@@ -162,7 +229,10 @@ class _CreatePostState extends State<CreatePost> {
                 items: _postType
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (v) => setState(() => postTypeDropdownValue = v),
+                onChanged: (v) => setState(() {
+                  postTypeDropdownValue = v;
+                  post.postType = postTypeDropdownValue;
+                }),
                 validator: (v) => v == null ? 'Please select post type' : null,
                 onSaved: (v) => setState(() => post.postType = v),
               ),
@@ -171,6 +241,7 @@ class _CreatePostState extends State<CreatePost> {
 
               /// CATEGORY
               DropdownButtonFormField<String>(
+                initialValue: categoryDropdownValue,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Category',
@@ -179,7 +250,10 @@ class _CreatePostState extends State<CreatePost> {
                 items: _category
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (v) => setState(() => categoryDropdownValue = v),
+                onChanged: (v) => setState(() {
+                  categoryDropdownValue = v;
+                  post.category = categoryDropdownValue;
+                }),
                 validator: (v) => v == null ? 'Please select category' : null,
                 onSaved: (v) => setState(() => post.category = v),
               ),
@@ -188,6 +262,7 @@ class _CreatePostState extends State<CreatePost> {
 
               /// TAGS
               MultiSelectDialogField<String>(
+                initialValue: tagsDropdownValue,
                 decoration: BoxDecoration(
                   border: Border.all(
                     color: _tagHasError
@@ -215,13 +290,17 @@ class _CreatePostState extends State<CreatePost> {
                 validator: (values) => values == null || values.isEmpty
                     ? '\t\t\t\tPlease select tags'
                     : null,
-                onSaved: (v) => setState(() => post.tags = v),
+                onSaved: (v) => setState(() {
+                  if (v == null) return;
+                  post.tags = v;
+                }),
               ),
 
               const SizedBox(height: 16),
 
               /// URL
               TextFormField(
+                controller: _urlController,
                 decoration: const InputDecoration(
                   labelText: 'URL',
                   border: OutlineInputBorder(),
@@ -238,7 +317,8 @@ class _CreatePostState extends State<CreatePost> {
                       ? null
                       : 'Please enter a valid URL';
                 },
-                onSaved: (text) => setState(() => post.url = text),
+                onSaved: (text) =>
+                    setState(() => post.url = _urlController.text),
               ),
 
               const SizedBox(height: 32),
@@ -249,7 +329,7 @@ class _CreatePostState extends State<CreatePost> {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: _saveForm,
-                  child: const Text('Create Post'),
+                  child: Text(appBarTitle),
                 ),
               ),
             ],
@@ -376,11 +456,17 @@ class _CreatePostState extends State<CreatePost> {
 
     post.createdDate = DateFormat("yyyy-MM-dd HH:mm").format(DateTime.now());
 
+    Navigator.pop(context, true);
+
     final provider = context.read<PostsProvider>();
 
-    provider.addPost(post);
+    if (post.id != null) {
+      provider.updatePost(post);
+    } else {
+      provider.addPost(post);
+    }
     provider.resetFilter();
 
-    Navigator.pop(context, true); // ⬅️ gửi signal về
+    showCenterToast(context, 'Post Saved Successfully');
   }
 }

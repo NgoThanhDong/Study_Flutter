@@ -48,18 +48,28 @@ class PostsProvider extends ChangeNotifier {
     _loadPosts();
   }
 
-  void addPost(Post post) {
-    post.id = _repository.allPosts.length + 1;
-    _repository.allPosts.add(post);
-    _loadPosts();
-  }
-
   void resetFilter() {
     searchText = '';
     categorySelect = '';
     tagSelect = '';
     postTypeSelect = '';
     notifyListeners();
+  }
+
+  void addPost(Post post) {
+    post.id = _repository.allPosts.length + 1;
+    _repository.add(post);
+    _loadPosts();
+  }
+
+  void updatePost(Post post) {
+    _repository.update(post);
+    _loadPosts();
+  }
+
+  void deletePost(int postId) {
+    _repository.delete(postId);
+    _loadPosts();
   }
 
 }

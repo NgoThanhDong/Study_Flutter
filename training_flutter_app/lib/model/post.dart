@@ -1,5 +1,4 @@
 class Post {
-
   // Attribute
   int? id;
   String? title;
@@ -28,4 +27,19 @@ class Post {
     this.createdDate,
   });
 
+  /// 🔥 Post rỗng cho Create
+  factory Post.empty() {
+    return Post(
+      title: '',
+      image: '',
+      description: '',
+      content: '',
+      author: '',
+      postType: '',
+      category: '',
+      tags: [],
+      url: '',
+      createdDate: '',
+    );
+  }
 }

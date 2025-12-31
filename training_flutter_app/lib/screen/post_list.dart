@@ -7,6 +7,7 @@ import 'package:training_flutter_app/provider/posts_provider.dart';
 import 'package:training_flutter_app/screen/create_post.dart';
 import 'package:training_flutter_app/screen/post_detail.dart';
 import 'package:training_flutter_app/model/post.dart';
+import 'package:training_flutter_app/utils/center_toast.dart';
 
 enum PostFilter { all, news, blog }
 
@@ -77,10 +78,7 @@ class _PostListState extends State<PostList> {
   Widget build(BuildContext context) {
     final posts = context.watch<PostsProvider>().posts;
 
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: _buildBody(posts),
-    );
+    return Scaffold(appBar: _buildAppBar(), body: _buildBody(posts));
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -101,10 +99,12 @@ class _PostListState extends State<PostList> {
   Widget _bottomAppBar() {
     return Consumer<PostsProvider>(
       builder: (_, provider, _) {
-        final categoryValue =
-            provider.categorySelect.isEmpty ? 'All' : provider.categorySelect;
-        final tagValue =
-            provider.tagSelect.isEmpty ? 'All' : provider.tagSelect;
+        final categoryValue = provider.categorySelect.isEmpty
+            ? 'All'
+            : provider.categorySelect;
+        final tagValue = provider.tagSelect.isEmpty
+            ? 'All'
+            : provider.tagSelect;
 
         return SizedBox(
           height: _heightBottomAppBar,
@@ -162,17 +162,18 @@ class _PostListState extends State<PostList> {
 
     return Expanded(
       child: Container(
-        decoration:
-            isSelected ? _boxDecorationSelected : _boxDecorationUnselected,
+        decoration: isSelected
+            ? _boxDecorationSelected
+            : _boxDecorationUnselected,
         child: TextButton(
           style: _textButtonStyle,
           onPressed: () {
             setState(() => _selectedFilter = filter);
             context.read<PostsProvider>().updatePostType(
-                  filter == PostFilter.all
-                      ? ''
-                      : '${filter.name[0].toUpperCase()}${filter.name.substring(1)}',
-                );
+              filter == PostFilter.all
+                  ? ''
+                  : '${filter.name[0].toUpperCase()}${filter.name.substring(1)}',
+            );
           },
           child: Text(
             text,
@@ -199,8 +200,9 @@ class _PostListState extends State<PostList> {
       hint: Text(hint, style: const TextStyle(color: Colors.white)),
       icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
       underline: Container(height: 1, color: Colors.white),
-      items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -232,8 +234,9 @@ class _PostListState extends State<PostList> {
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'No data or your search terms did not match any definitions!',
+            'No data',
             textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 24),
           ),
         ),
       );
@@ -252,14 +255,47 @@ class _PostListState extends State<PostList> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    post.title!,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          post.title!,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      PopupMenuButton(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.more_vert),
+                        onSelected: (value) =>
+                            _showMenuSelection(context, value, postList[index]),
+                        itemBuilder: (context) => <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'Edit',
+                            child: ListTile(
+                              leading: Icon(Icons.edit, color: Colors.blue),
+                              title: Text('Edit'),
+                            ),
+                          ),
+                          PopupMenuDivider(height: 8),
+                          const PopupMenuItem<String>(
+                            value: 'Delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete, color: Colors.red),
+                              title: Text('Delete'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 8),
+                  // Image
                   Row(
                     children: [
                       Image.memory(
@@ -314,9 +350,7 @@ class _PostListState extends State<PostList> {
     setState(() {
       _heightBottomAppBar = _heightBottomAppBar == 0 ? 90 : 0;
       _arrowDrop = Icon(
-        _heightBottomAppBar == 0
-            ? Icons.arrow_drop_down
-            : Icons.arrow_drop_up,
+        _heightBottomAppBar == 0 ? Icons.arrow_drop_down : Icons.arrow_drop_up,
       );
     });
   }
@@ -326,7 +360,10 @@ class _PostListState extends State<PostList> {
   void _createPostPressed() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CreatePost()),
+      MaterialPageRoute(
+        builder: (_) =>
+            CreatePost(appBarTitle: 'Create Post', post: Post.empty()),
+      ),
     );
 
     if (result == true && mounted) {
@@ -350,5 +387,58 @@ class _PostListState extends State<PostList> {
         curve: Curves.easeOut,
       );
     });
+  }
+
+  // Delete or edit the post
+  void _showMenuSelection(BuildContext context, String value, Post post) async {
+    if (value == 'Edit') {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CreatePost(appBarTitle: 'Edit Post', post: post),
+        ),
+      );
+
+      if (result == true && mounted) {
+        setState(() {
+          // _selectedFilter = PostFilter.all;
+        });
+      }
+    } else {
+      _showDeleteDialog(context, post);
+    }
+  }
+
+  void _showDeleteDialog(BuildContext context, Post post) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: Text('Are you want to delete?'),
+          children: <Widget>[
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.pop(context); //close the dialog box
+                _deletePost(context, post.id!);
+              },
+              child: const Text('OK', style: TextStyle(fontSize: 18.0)),
+            ),
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.pop(context); //close the dialog box
+              },
+              child: const Text('Cancel', style: TextStyle(fontSize: 18.0)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deletePost(BuildContext context, int postId) {
+    final provider = context.read<PostsProvider>();
+
+    provider.deletePost(postId);
+    showCenterToast(context, 'Post Deleted Successfully');
   }
 }
