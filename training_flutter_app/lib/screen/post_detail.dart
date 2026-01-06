@@ -17,7 +17,9 @@ class PostDetail extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Post Detail'),  actions: [
+      appBar: AppBar(
+        title: const Text('Post Detail'),
+        actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, _) {
               return IconButton(
@@ -40,7 +42,8 @@ class PostDetail extends StatelessWidget {
               );
             },
           ),
-        ],),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -98,16 +101,10 @@ class PostDetail extends StatelessWidget {
   Widget _buildCategory(BuildContext context) {
     return Wrap(
       children: [
-        const Text(
-          'Category: ',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('Category: ', style: TextStyle(fontWeight: FontWeight.bold)),
         _buildLink(
           text: post.category!,
-          onPressed: () => _applyFilter(
-            context,
-            category: post.category,
-          ),
+          onPressed: () => _applyFilter(context, category: post.category),
         ),
       ],
     );
@@ -118,10 +115,7 @@ class PostDetail extends StatelessWidget {
 
     return Wrap(
       children: [
-        const Text(
-          'Tags: ',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('Tags: ', style: TextStyle(fontWeight: FontWeight.bold)),
         ...List.generate(tags.length, (index) {
           final tag = tags[index];
           final text = index == tags.length - 1 ? tag : '$tag,';
@@ -130,10 +124,7 @@ class PostDetail extends StatelessWidget {
             padding: const EdgeInsets.only(right: 4),
             child: _buildLink(
               text: text,
-              onPressed: () => _applyFilter(
-                context,
-                tag: tag,
-              ),
+              onPressed: () => _applyFilter(context, tag: tag),
             ),
           );
         }),
@@ -141,10 +132,7 @@ class PostDetail extends StatelessWidget {
     );
   }
 
-  Widget _buildLink({
-    required String text,
-    required VoidCallback onPressed,
-  }) {
+  Widget _buildLink({required String text, required VoidCallback onPressed}) {
     return InkWell(
       onTap: onPressed,
       child: Text(
@@ -159,11 +147,7 @@ class PostDetail extends StatelessWidget {
 
   // ================= LOGIC =================
 
-  void _applyFilter(
-    BuildContext context, {
-    String? category,
-    String? tag,
-  }) {
+  void _applyFilter(BuildContext context, {String? category, String? tag}) {
     final provider = context.read<PostsProvider>();
 
     if (category != null) {
