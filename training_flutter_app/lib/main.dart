@@ -1,77 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_flutter_app/provider/posts_provider.dart';
+
+import 'provider/posts_provider.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 import 'screen/post_list.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => PostsProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => PostsProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()), // 👈 NEW
       ],
       child: const MyApp(),
     ),
   );
 }
 
-/// Root application
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Post Manager',
 
-      /// ================= THEME =================
-      theme: ThemeData(
-        useMaterial3: true,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode, // 👈 QUAN TRỌNG
 
-        /// Main color system
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-
-        /// AppBar global style
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-          elevation: 1,
-        ),
-
-        /// ElevatedButton global style
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-
-        /// Input / Form style
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-          labelStyle: TextStyle(fontSize: 16),
-        ),
-
-        /// Text style
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(fontSize: 14),
-          bodyLarge: TextStyle(fontSize: 16),
-          titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      ),
-
-      /// ================= ROUTING =================
       home: const PostList(),
     );
   }

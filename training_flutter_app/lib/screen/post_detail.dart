@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'package:training_flutter_app/model/post.dart';
 import 'package:training_flutter_app/provider/posts_provider.dart';
+import 'package:training_flutter_app/theme/theme_provider.dart';
 
 class PostDetail extends StatelessWidget {
   final Post post;
@@ -16,7 +17,30 @@ class PostDetail extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Post Detail')),
+      appBar: AppBar(title: const Text('Post Detail'),  actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                tooltip: themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) =>
+                      RotationTransition(turns: anim, child: child),
+                  child: Icon(
+                    themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
+                    key: ValueKey(themeProvider.isDarkMode),
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                },
+              );
+            },
+          ),
+        ],),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

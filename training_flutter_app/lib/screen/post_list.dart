@@ -7,6 +7,7 @@ import 'package:training_flutter_app/provider/posts_provider.dart';
 import 'package:training_flutter_app/screen/create_post.dart';
 import 'package:training_flutter_app/screen/post_detail.dart';
 import 'package:training_flutter_app/model/post.dart';
+import 'package:training_flutter_app/theme/theme_provider.dart';
 import 'package:training_flutter_app/utils/center_toast.dart';
 
 enum PostFilter { all, news, blog }
@@ -49,21 +50,40 @@ class _PostListState extends State<PostList> {
   PostFilter _selectedFilter = PostFilter.all;
 
   /// STYLES
-  final BoxDecoration _boxDecorationSelected = const BoxDecoration(
-    color: Colors.blue,
-    border: Border(bottom: BorderSide(color: Colors.white, width: 4)),
-  );
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
-  final BoxDecoration _boxDecorationUnselected = const BoxDecoration(
-    color: Colors.blue,
-    border: Border(bottom: BorderSide(color: Colors.blue, width: 4)),
-  );
+  BoxDecoration _buildBoxDecoration(bool isSelected) {
+    if (_isDark) {
+      return BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        border: Border(
+          bottom: BorderSide(
+            color: isSelected ? Colors.white70 : Colors.transparent,
+            width: 4,
+          ),
+        ),
+      );
+    }
 
-  final ButtonStyle _textButtonStyle = TextButton.styleFrom(
-    foregroundColor: Colors.white,
-    padding: EdgeInsets.zero,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-  );
+    // LIGHT MODE (GIỮ Y NGUYÊN)
+    return BoxDecoration(
+      color: Colors.blue,
+      border: Border(
+        bottom: BorderSide(
+          color: isSelected ? Colors.white : Colors.blue,
+          width: 4,
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle _buildTextButtonStyle() {
+    return TextButton.styleFrom(
+      foregroundColor: Colors.white,
+      padding: EdgeInsets.zero,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+    );
+  }
 
   @override
   void dispose() {
@@ -86,7 +106,29 @@ class _PostListState extends State<PostList> {
       centerTitle: true,
       title: _appBarTitle,
       leading: IconButton(icon: _searchIcon, onPressed: _searchPressed),
-      actions: [IconButton(icon: _arrowDrop, onPressed: _arrowDropPressed)],
+      actions: [
+        IconButton(icon: _arrowDrop, onPressed: _arrowDropPressed),
+        Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            return IconButton(
+              tooltip: themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) =>
+                    RotationTransition(turns: anim, child: child),
+                child: Icon(
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  key: ValueKey(themeProvider.isDarkMode),
+                  color: Colors.white,
+                ),
+              ),
+              onPressed: () {
+                themeProvider.toggleTheme(!themeProvider.isDarkMode);
+              },
+            );
+          },
+        ),
+      ],
       bottom: PreferredSize(
         preferredSize: Size.fromHeight(_heightBottomAppBar),
         child: _bottomAppBar(),
@@ -118,6 +160,7 @@ class _PostListState extends State<PostList> {
                     Expanded(
                       flex: 5,
                       child: _buildDropdown(
+                        context: context,
                         hint: 'Category',
                         value: categoryValue,
                         items: _categories,
@@ -129,6 +172,7 @@ class _PostListState extends State<PostList> {
                     Expanded(
                       flex: 5,
                       child: _buildDropdown(
+                        context: context,
                         hint: 'Tag',
                         value: tagValue,
                         items: _tags,
@@ -162,11 +206,9 @@ class _PostListState extends State<PostList> {
 
     return Expanded(
       child: Container(
-        decoration: isSelected
-            ? _boxDecorationSelected
-            : _boxDecorationUnselected,
+        decoration: _buildBoxDecoration(isSelected),
         child: TextButton(
-          style: _textButtonStyle,
+          style: _buildTextButtonStyle(),
           onPressed: () {
             setState(() => _selectedFilter = filter);
             context.read<PostsProvider>().updatePostType(
@@ -187,19 +229,27 @@ class _PostListState extends State<PostList> {
   }
 
   Widget _buildDropdown({
+    required BuildContext context,
     required String hint,
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
+    final dropdownBgColor = _isDark
+        ? Colors.grey.shade800
+        : Colors.lightBlueAccent;
+
+    final textColor = Colors.white;
+    final underlineColor = Colors.white;
+
     return DropdownButton<String>(
       isExpanded: true,
       value: value,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
-      dropdownColor: Colors.lightBlueAccent,
-      hint: Text(hint, style: const TextStyle(color: Colors.white)),
-      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-      underline: Container(height: 1, color: Colors.white),
+      style: TextStyle(color: textColor, fontSize: 16),
+      dropdownColor: dropdownBgColor,
+      hint: Text(hint, style: TextStyle(color: textColor)),
+      icon: Icon(Icons.arrow_drop_down, color: textColor),
+      underline: Container(height: 1, color: underlineColor),
       items: items
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),

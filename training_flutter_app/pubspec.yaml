@@ -38,6 +38,7 @@ dependencies:
   image_picker: ^1.2.1
   provider: ^6.1.2
   intl: ^0.18.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,14 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+
+  fonts:
+    - family: Comfortaa
+      fonts:
+        - asset: fonts/Comfortaa-Regular.ttf
+        - asset: fonts/Comfortaa-Medium.ttf
+          weight: 500
+          
   # fonts:
   #   - family: Schyler
   #     fonts:

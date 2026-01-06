@@ -9,6 +9,7 @@ import 'package:training_flutter_app/model/post.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:training_flutter_app/provider/posts_provider.dart';
+import 'package:training_flutter_app/theme/theme_provider.dart';
 import 'package:training_flutter_app/utils/center_toast.dart';
 
 class CreatePost extends StatefulWidget {
@@ -53,7 +54,6 @@ class _CreatePostState extends State<CreatePost> {
   List<String> tagsDropdownValue = [];
 
   /// ================= VALIDATION FLAGS =================
-  bool _tagHasError = false;
   bool _hasImageError = false;
 
   /// ================= IMAGE =================
@@ -121,8 +121,47 @@ class _CreatePostState extends State<CreatePost> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final fieldTextColor =
+        theme.inputDecorationTheme.labelStyle?.color ??
+        theme.textTheme.bodyMedium!.color!;
+
+    final isDark = theme.brightness == Brightness.dark;
+
+    final dialogBgColor = isDark ? const Color(0xFF2A2A2A) : Colors.white;
+    final dialogTextColor = isDark ? Colors.white70 : Colors.black87;
+    final selectedTextColor = isDark ? Colors.white : Colors.black;
+
     return Scaffold(
-      appBar: AppBar(title: Text(appBarTitle)),
+      appBar: AppBar(
+        title: Text(appBarTitle),
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                tooltip: themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) =>
+                      RotationTransition(turns: anim, child: child),
+                  child: Icon(
+                    themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
+                    key: ValueKey(themeProvider.isDarkMode),
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                },
+              );
+            },
+          ),
+        ],
+      ),
+
       body: Form(
         key: _formKey,
 
@@ -261,39 +300,85 @@ class _CreatePostState extends State<CreatePost> {
               const SizedBox(height: 16),
 
               /// TAGS
-              MultiSelectDialogField<String>(
+              FormField<List<String>>(
                 initialValue: tagsDropdownValue,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _tagHasError
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).dividerColor,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                items: _tags.map((e) => MultiSelectItem(e, e)).toList(),
-                title: const Text('Tags'),
-                buttonText: Text(
-                  'Select tags',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: _tagHasError
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-                listType: MultiSelectListType.LIST,
-                onConfirm: (values) => setState(() {
-                  tagsDropdownValue = values;
-                  _tagHasError = tagsDropdownValue.isEmpty;
-                }),
-                validator: (values) => values == null || values.isEmpty
-                    ? '\t\t\t\tPlease select tags'
-                    : null,
-                onSaved: (v) => setState(() {
-                  if (v == null) return;
-                  post.tags = v;
-                }),
+                validator: (values) {
+                  if (values == null || values.isEmpty) {
+                    return '\t\t\tPlease select tags';
+                  }
+                  return null;
+                },
+                builder: (state) {
+                  return InputDecorator(
+                    decoration: InputDecoration(
+                      // labelText: 'Tags',
+                      errorText: state.hasError ? state.errorText : null,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.only(
+                        top: 7,
+                        bottom: 7,
+                        right: 0,
+                        left: 2,
+                      ),
+                    ),
+                    child: IconTheme(
+                      data: IconThemeData(
+                        color: fieldTextColor, // ✅ icon xám giống field khác
+                      ),
+                      child: MultiSelectDialogField<String>(
+                        decoration: const BoxDecoration(), // bỏ padding nội bộ
+                        backgroundColor: dialogBgColor, // ✅ nền dialog
+                        itemsTextStyle: TextStyle(
+                          color: dialogTextColor,
+                          fontSize: 16,
+                        ),
+                        selectedItemsTextStyle: TextStyle(
+                          color: selectedTextColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        title: Text(
+                          'Select Tags',
+                          style: TextStyle(
+                            color: selectedTextColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        confirmText: Text(
+                          'OK',
+                          style: TextStyle(color: theme.colorScheme.primary),
+                        ),
+                        cancelText: Text(
+                          'CANCEL',
+                          style: TextStyle(color: dialogTextColor),
+                        ),
+                        buttonText: Text(
+                          'Select tags',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color:
+                                theme.inputDecorationTheme.labelStyle?.color ??
+                                theme.textTheme.bodyMedium!.color!,
+                          ),
+                        ),
+                        items: _tags.map((e) => MultiSelectItem(e, e)).toList(),
+                        initialValue: tagsDropdownValue,
+                        listType: MultiSelectListType.LIST,
+                        onConfirm: (values) {
+                          setState(() {
+                            tagsDropdownValue = values;
+                          });
+                          state.didChange(values);
+                        },
+                        onSaved: (v) => setState(() {
+                          if (v == null) return;
+                          post.tags = v;
+                        }),
+                      ),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
@@ -437,7 +522,6 @@ class _CreatePostState extends State<CreatePost> {
 
     setState(() {
       _hasImageError = !hasImage;
-      _tagHasError = tagsDropdownValue.isEmpty;
     });
 
     if (!isValid || !hasImage || tagsDropdownValue.isEmpty) {
