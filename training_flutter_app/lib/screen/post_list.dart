@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rive/rive.dart';
+import 'package:training_flutter_app/animation/fading_circle.dart';
+import 'package:training_flutter_app/animation/slide_right_route.dart';
 
 import 'package:training_flutter_app/provider/posts_provider.dart';
 import 'package:training_flutter_app/screen/create_post.dart';
@@ -51,6 +55,20 @@ class _PostListState extends State<PostList> {
 
   /// STYLES
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    });
+  }
 
   BoxDecoration _buildBoxDecoration(bool isSelected) {
     if (_isDark) {
@@ -260,6 +278,24 @@ class _PostListState extends State<PostList> {
   /// ================= BODY =================
 
   Widget _buildBody(List<Post> postList) {
+    if (_isLoading) {
+      final colorScheme = Theme.of(context).colorScheme;
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Loading...', style: Theme.of(context).textTheme.titleLarge),
+            SizedBox(height: 50),
+            SpinKitFadingCircle(
+              color: colorScheme.primary,
+              size: 100,
+              shape: SpinKitShape.square,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         Expanded(child: _buildPostList(postList)),
@@ -280,13 +316,24 @@ class _PostListState extends State<PostList> {
 
   Widget _buildPostList(List<Post> postList) {
     if (postList.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'No data',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('No data', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 50),
+              const SizedBox(
+                width: 300,
+                height: 300,
+                child: RiveAnimation.asset(
+                  'assets/animations/nodata.riv',
+                  animations: ['idle'],
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -298,72 +345,132 @@ class _PostListState extends State<PostList> {
       itemBuilder: (_, index) {
         final post = postList[index];
 
-        return ListTile(
-          title: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          post.title!,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+        return GestureDetector(
+          child: ListTile(
+            title: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            post.title!,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
 
-                      PopupMenuButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(Icons.more_vert),
-                        onSelected: (value) =>
-                            _showMenuSelection(context, value, postList[index]),
-                        itemBuilder: (context) => <PopupMenuEntry<String>>[
-                          const PopupMenuItem<String>(
-                            value: 'Edit',
-                            child: ListTile(
-                              leading: Icon(Icons.edit, color: Colors.blue),
-                              title: Text('Edit'),
-                            ),
+                        PopupMenuButton(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(Icons.more_vert),
+                          onSelected: (value) => _showMenuSelection(
+                            context,
+                            value,
+                            postList[index],
                           ),
-                          PopupMenuDivider(height: 8),
-                          const PopupMenuItem<String>(
-                            value: 'Delete',
-                            child: ListTile(
-                              leading: Icon(Icons.delete, color: Colors.red),
-                              title: Text('Delete'),
+                          itemBuilder: (context) => <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              value: 'Edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit, color: Colors.blue),
+                                title: Text('Edit'),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                            PopupMenuDivider(height: 8),
+                            const PopupMenuItem<String>(
+                              value: 'Delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete, color: Colors.red),
+                                title: Text('Delete'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 8),
-                  // Image
-                  Row(
-                    children: [
-                      Image.memory(
-                        Base64Decoder().convert(post.image!),
-                        width: 100,
-                        height: 100,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(child: Text(post.description!)),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 8),
+
+                    // Image
+                    Row(
+                      children: [
+                        Hero(
+                          tag: "${post.id}",
+                          flightShuttleBuilder:
+                              (
+                                BuildContext flightContext,
+                                Animation<double> animation,
+                                HeroFlightDirection flightDirection,
+                                BuildContext fromHeroContext,
+                                BuildContext toHeroContext,
+                              ) {
+                                final Hero toHero =
+                                    toHeroContext.widget as Hero;
+
+                                return ScaleTransition(
+                                  scale: animation.drive(
+                                    Tween<double>(begin: 0.0, end: 1.0).chain(
+                                      CurveTween(
+                                        curve: Interval(
+                                          0.0,
+                                          1.0,
+                                          curve: PeakQuadraticCurve(),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  child:
+                                      flightDirection ==
+                                          HeroFlightDirection.push
+                                      ? RotationTransition(
+                                          turns: animation,
+                                          child: toHero.child,
+                                        )
+                                      : FadeTransition(
+                                          opacity: animation.drive(
+                                            Tween<double>(
+                                              begin: 0.0,
+                                              end: 1.0,
+                                            ).chain(
+                                              CurveTween(
+                                                curve: Interval(
+                                                  0.0,
+                                                  1.0,
+                                                  curve: ValleyQuadraticCurve(),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          child: toHero.child,
+                                        ),
+                                );
+                              },
+
+                          child: Image.memory(
+                            Base64Decoder().convert(post.image!),
+                            width: 100,
+                            height: 100,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(child: Text(post.description!)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PostDetail(post: post)),
+            onTap: () => Navigator.push(
+              context,
+              SlideRightRoute(page: PostDetail(post: post)),
+              // MaterialPageRoute(builder: (_) => PostDetail(post: post)),
+            ),
           ),
         );
       },
@@ -410,10 +517,11 @@ class _PostListState extends State<PostList> {
   void _createPostPressed() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            CreatePost(appBarTitle: 'Create Post', post: Post.empty()),
-      ),
+      SlideRightRoute(page: CreatePost(appBarTitle: 'Create Post', post: Post.empty())),
+      // MaterialPageRoute(
+      //   builder: (_) =>
+      //       CreatePost(appBarTitle: 'Create Post', post: Post.empty()),
+      // ),
     );
 
     if (result == true && mounted) {
@@ -444,9 +552,10 @@ class _PostListState extends State<PostList> {
     if (value == 'Edit') {
       final result = await Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => CreatePost(appBarTitle: 'Edit Post', post: post),
-        ),
+        SlideRightRoute(page: CreatePost(appBarTitle: 'Edit Post', post: post)),
+        // MaterialPageRoute(
+        //   builder: (_) => CreatePost(appBarTitle: 'Edit Post', post: post),
+        // ),
       );
 
       if (result == true && mounted) {
@@ -490,5 +599,21 @@ class _PostListState extends State<PostList> {
 
     provider.deletePost(postId);
     showCenterToast(context, 'Post Deleted Successfully');
+  }
+}
+
+class ValleyQuadraticCurve extends Curve {
+  @override
+  double transform(double t) {
+    assert(t >= 0.0 && t <= 1.0);
+    return 4 * math.pow(t - 0.5, 2).toDouble();
+  }
+}
+
+class PeakQuadraticCurve extends Curve {
+  @override
+  double transform(double t) {
+    assert(t >= 0.0 && t <= 1.0);
+    return -15 * math.pow(t, 2) + 15 * t + 1;
   }
 }

@@ -68,11 +68,15 @@ class PostDetail extends StatelessWidget {
             const SizedBox(height: 16),
 
             /// IMAGE
-            SizedBox(
-              width: double.infinity,
-              child: Image.memory(
-                Base64Decoder().convert(post.image!),
-                fit: BoxFit.contain,
+            Hero(
+              tag: "${post.id}",
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: 300,
+                child: Image.memory(
+                  Base64Decoder().convert(post.image!),
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// import 'package:flutter/scheduler.dart' show timeDilation;
 
 import 'provider/posts_provider.dart';
 import 'theme/app_theme.dart';
@@ -7,6 +8,11 @@ import 'theme/theme_provider.dart';
 import 'screen/post_list.dart';
 
 void main() {
+  // assert(() {
+  //   timeDilation = 2;
+  //   return true;
+  // }());
+
   runApp(
     MultiProvider(
       providers: [
