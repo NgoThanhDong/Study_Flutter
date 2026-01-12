@@ -27,9 +27,7 @@ class Brick extends RectangleComponent
     PositionComponent other,
   ) {
     super.onCollisionStart(intersectionPoints, other);
-
-    // if (other is! Ball) return;
-
+    
     if (_isDestroyed) return;
     if (other is! Ball) return;
 
