@@ -4,13 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../brick_breaker.dart';
 import '../config.dart';
-import 'overlay_screen.dart';                                   // Add this import
-import 'score_card.dart';                                       // And this one too
+import 'overlay_screen.dart'; // Add this import
+import 'score_card.dart'; // And this one too
+import 'lives_card.dart';
 
-class GameApp extends StatefulWidget {                          // Modify this line
+class GameApp extends StatefulWidget {
+  // Modify this line
   const GameApp({super.key});
 
-  @override                                                     // Add from here...
+  @override // Add from here...
   State<GameApp> createState() => _GameAppState();
 }
 
@@ -21,7 +23,7 @@ class _GameAppState extends State<GameApp> {
   void initState() {
     super.initState();
     game = BrickBreaker();
-  }                                                             // To here.
+  } // To here.
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +48,24 @@ class _GameAppState extends State<GameApp> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Center(
-                child: Column(                                  // Modify from here...
+                child: Column(
+                  // Modify from here...
                   children: [
-                    ScoreCard(score: game.score),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          ScoreCard(score: game.score),
+                          LivesCard(lives: game.lives),
+                        ],
+                      ),
+                    ),
                     Expanded(
                       child: FittedBox(
                         child: SizedBox(
@@ -72,13 +89,18 @@ class _GameAppState extends State<GameApp> {
                                     title: 'Y O U   W O N ! ! !',
                                     subtitle: 'Tap to Play Again',
                                   ),
+                              PlayState.paused.name: (context, game) =>
+                                  const OverlayScreen(
+                                    title: 'P A U S E D',
+                                    subtitle: 'Press P or ESC',
+                                  ),
                             },
                           ),
                         ),
                       ),
                     ),
                   ],
-                ),                                              // To here.
+                ), // To here.
               ),
             ),
           ),

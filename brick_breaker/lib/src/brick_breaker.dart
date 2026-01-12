@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'components/components.dart';
 import 'config.dart';
 
-enum PlayState { welcome, playing, gameOver, won }
+enum PlayState { welcome, playing, paused, gameOver, won }
 
 class BrickBreaker extends FlameGame
     with HasCollisionDetection, KeyboardEvents, TapCallbacks {
@@ -22,24 +22,40 @@ class BrickBreaker extends FlameGame
         ),
       );
 
-  final ValueNotifier<int> score = ValueNotifier(0);  // Add this line
+  final ValueNotifier<int> score = ValueNotifier(0);
+  final ValueNotifier<int> lives = ValueNotifier(3);
+
   final rand = math.Random();
   double get width => size.x;
   double get height => size.y;
 
   late PlayState _playState;
+
   PlayState get playState => _playState;
-  set playState(PlayState playState) {
-    _playState = playState;
-    switch (playState) {
-      case PlayState.welcome:
-      case PlayState.gameOver:
-      case PlayState.won:
-        overlays.add(playState.name);
+
+  set playState(PlayState state) {
+    _playState = state;
+
+    switch (state) {
       case PlayState.playing:
+        resumeEngine();
         overlays.remove(PlayState.welcome.name);
         overlays.remove(PlayState.gameOver.name);
         overlays.remove(PlayState.won.name);
+        overlays.remove(PlayState.paused.name);
+        break;
+
+      case PlayState.paused:
+        pauseEngine();
+        overlays.add(PlayState.paused.name);
+        break;
+
+      case PlayState.welcome:
+      case PlayState.gameOver:
+      case PlayState.won:
+        pauseEngine();
+        overlays.add(state.name);
+        break;
     }
   }
 
@@ -57,12 +73,18 @@ class BrickBreaker extends FlameGame
   void startGame() {
     if (playState == PlayState.playing) return;
 
+    if (playState == PlayState.paused) {
+      playState = PlayState.playing;
+      return;
+    }
+
     world.removeAll(world.children.query<Ball>());
     world.removeAll(world.children.query<Bat>());
     world.removeAll(world.children.query<Brick>());
 
     playState = PlayState.playing;
-    score.value = 0;  // Add this line
+    score.value = 0;
+    lives.value = 3;
 
     world.add(
       Ball(
@@ -108,19 +130,57 @@ class BrickBreaker extends FlameGame
     KeyEvent event,
     Set<LogicalKeyboardKey> keysPressed,
   ) {
-    super.onKeyEvent(event, keysPressed);
+    if (event is! KeyDownEvent &&
+        !(event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+            event.logicalKey == LogicalKeyboardKey.arrowRight)) {
+      return KeyEventResult.ignored;
+    }
+
     switch (event.logicalKey) {
+      case LogicalKeyboardKey.keyP:
+      case LogicalKeyboardKey.escape:
+        if (playState == PlayState.playing) {
+          playState = PlayState.paused;
+        } else if (playState == PlayState.paused) {
+          playState = PlayState.playing;
+        }
+        return KeyEventResult.handled;
+
       case LogicalKeyboardKey.arrowLeft:
-        world.children.query<Bat>().first.moveBy(-batStep);
+        if (playState == PlayState.playing) {
+          world.children.query<Bat>().first.moveBy(-batStep);
+        }
+        return KeyEventResult.handled;
+
       case LogicalKeyboardKey.arrowRight:
-        world.children.query<Bat>().first.moveBy(batStep);
+        if (playState == PlayState.playing) {
+          world.children.query<Bat>().first.moveBy(batStep);
+        }
+        return KeyEventResult.handled;
+
       case LogicalKeyboardKey.space:
       case LogicalKeyboardKey.enter:
         startGame();
+        return KeyEventResult.handled;
     }
-    return KeyEventResult.handled;
+
+    return KeyEventResult.ignored;
   }
 
   @override
   Color backgroundColor() => const Color(0xfff2e8cf);
+
+  void spawnBall() {
+    world.add(
+      Ball(
+        difficultyModifier: difficultyModifier,
+        radius: ballRadius,
+        position: size / 2,
+        velocity: Vector2(
+          (rand.nextDouble() - 0.5) * width,
+          height * 0.2,
+        ).normalized()..scale(height / 4),
+      ),
+    );
+  }
 }

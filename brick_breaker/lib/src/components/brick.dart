@@ -19,6 +19,8 @@ class Brick extends RectangleComponent
         children: [RectangleHitbox()],
       );
 
+  bool _isDestroyed = false;
+
   @override
   void onCollisionStart(
     Set<Vector2> intersectionPoints,
@@ -26,10 +28,15 @@ class Brick extends RectangleComponent
   ) {
     super.onCollisionStart(intersectionPoints, other);
 
+    // if (other is! Ball) return;
+
+    if (_isDestroyed) return;
     if (other is! Ball) return;
 
+    _isDestroyed = true;
+
     removeFromParent();
-    game.score.value++; // Add this line
+    game.score.value++;
 
     if (game.world.children.query<Brick>().length == 1) {
       game.playState = PlayState.won;

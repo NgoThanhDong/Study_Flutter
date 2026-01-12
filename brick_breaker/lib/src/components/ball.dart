@@ -50,11 +50,18 @@ class Ball extends CircleComponent
         add(
           RemoveEffect(
             delay: 0.35,
-            onComplete: () {                                    // Modify from here
-              game.playState = PlayState.gameOver;
+            onComplete: () {
+              // Modify from here
+              game.lives.value--;
+
+              if (game.lives.value <= 0) {
+                game.playState = PlayState.gameOver;
+              } else {
+                game.spawnBall();
+              }
             },
           ),
-        );                                                      // To here.
+        ); // To here.
       }
     } else if (other is Bat) {
       velocity.y = -velocity.y;
@@ -74,4 +81,5 @@ class Ball extends CircleComponent
       velocity.setFrom(velocity * difficultyModifier);
     }
   }
+
 }
